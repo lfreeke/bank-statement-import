@@ -268,7 +268,7 @@ class OnlineBankStatementProviderPayPal(models.Model):
         payer = data["payer_info"]
         cart = data["cart_info"]
         item_details = cart.get("item_details") or [{}]
-        transaction_id = transaction["transaction_id"]
+        transaction_id = transaction.get("invoice_id")
         event_code = transaction["transaction_event_code"]
         date = self._paypal_get_transaction_date(data)
         total_amount = self._paypal_get_transaction_total_amount(data)
@@ -278,12 +278,15 @@ class OnlineBankStatementProviderPayPal(models.Model):
         invoice = transaction.get("invoice_id")
         item_name = item_details[0].get("item_name") if item_details else ""
         payer_name = payer.get("payer_name", {})
-        partner_id = (
-            self.env["sale.order"]
-            .search([("name", "=", item_name)], limit=1)
-            .partner_id
-            or self.env["res.partner"]
-        )
+        if transaction_id:
+            partner_id = (
+                self.env["sale.order"]
+                .search([("transaction_id", "=", transaction_id)], limit=1)
+                .partner_id
+                or self.env["res.partner"]
+            )
+        else:
+            partner_id = self.env["res.partner"]
         payer_email = payer_name.get("email_address")
         if invoice:
             invoice = _("Invoice %s") % invoice
